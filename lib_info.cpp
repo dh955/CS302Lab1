@@ -1,10 +1,10 @@
-//Name: Daniel Huynh and Ian Henson PS: Line 67 is where it goes wrong
+//Name: Daniel Huynh and Ian Henson
 //Professor Scott Emrich
-//This code takes the file, parses the contents into their data structure, takes the '_' out, stores them into the struct
+//This code takes the file, parses the contents into their data structure, takes the '_' out, stores them into the struct and then prints them for the user
 #include <iostream>
 #include <map>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <fstream>
 #include <sstream>
 using namespace std;
@@ -32,93 +32,91 @@ struct Artist {
 int main(int argc, char *argv[]){
 	ifstream fin;
 	fin.open(argv[1]);
+
 	string line;
-	string temp;
-	int min = 0;
-	int sec = 0;
-	int total = 0;
-	char hold;
-
-	Song song;
-	Artist artist;
-	Album album;
-
-	unordered_map<string, Artist> Artsists;
-	map<int, Song >::iterator nit;
-	map<string, Album>::iterator artIter;
+	map<string, Artist> Artists;
 
 	stringstream ss;
 	while(getline(fin,line))
 	{
 		//all of the title, time, artist, album, genre, track will be spliced seperately then put into their
 		//respective data type in the struct
+		Song song;
+		Artist artist;
+		Album album;
 
-		//title
+		string title, time, art, albumn, genre, track;
 		ss << line;
-		ss >> temp;
-		song.title = temp;
-		cout << temp << endl;
+		ss >> title >> time >> art >> albumn >> genre >> track;
+
+		//song
 		//replaces '_' for white space
-		for(int i = 0; i < int(temp.length()); i++){
-			if(temp[i] == '_') temp[i] = ' ';
+		for(int i = 0; i < int(title.length()); i++){
+			if(title[i] == '_') title[i] = ' ';
 		}
-		//time, bug line 67
-		ss << line;
-		ss >> min >> hold >> sec;
-		total = (min * 60) + sec;
+		song.title = title;
+
+		//pull minute and second info
+		int min = stoi(time.substr(0, time.find(':')));
+		int sec = stoi(time.substr(time.find(':')+1,time.size()));
+		int total = (min * 60) + sec;
 		song.time = total;
-		album.time = total;
-		artist.time = total;
 		//artist
-		ss << line;
-		ss >> temp;
 		//replaces '_' for white space
-		for(int i = 0; i < int(temp.length()); i++){
-			if(temp[i] == '_') temp[i] = ' ';
+		for(int i = 0; i < int(art.length()); i++){
+			if(art[i] == '_') art[i] = ' ';
 		}
-			artist.name = temp;
-			ss.clear();
-		//album
-		ss << line;
-		ss >> temp;
+		//different behavior if new or already stored
+		if(Artists.find(art) != Artists.end()){
+			Artists[art].time += total;
+			Artists[art].nsongs++;
+		}
+		else{
+			artist.time = total;
+			artist.name = art;
+
+			Artists[art] = artist;
+		}
+		//albumn
 		//replaces '_' for white space
-		for(int i = 0; i < int(temp.length()); i++){
-			if(temp[i] == '_') temp[i] = ' ';
+		for(int i = 0; i < int(albumn.length()); i++){
+			if(albumn[i] == '_') albumn[i] = ' ';
 		}
-		cout << temp << endl;
-		album.name = temp;
+		//same thing as above
+		if(Artists[art].albums.find(albumn) != Artists[art].albums.end()){
+			Artists[art].albums[albumn].time += total;
+			Artists[art].albums[albumn].nsongs++;
+			Artists[art].albums[albumn].songs[stoi(track)] = song;
+		}
+		else{
+			album.time = total;
+			album.songs[stoi(track)] = song;
+			album.name = albumn;
+
+			Artists[art].albums[albumn] = album;
+		}
 		//genre 'not used anywhere'
-		ss << line;
-		ss >> temp;
 
 		//track, inserts new track into albums map
-		ss << line;
-		ss >> sec;
 		//puts album into struc
-		album.songs[sec] = song;
 		//find dupe album
-		artist.albums[album.name] = album;
-		//adds artist to unordered map, checks for dupe artist, then updates info in artsists
-		if(Artsists.find(artist.name) != Artsists.end()){
-			artist.time += Artsists[artist.name].time;
-			artist.nsongs += 1;
-			//cout << "Old Artists: " <<  artist.name << endl;
-	}
-		else{
-			//cout << "New Artists: " << artist.name << endl;
-		}
-
-		if(Artsists[artist.name].albums.find(album.name) != Artsists[artist.name].albums.end()){
-			album.time += Artsists[artist.name].albums[album.name].time;
-			album.nsongs += 1; 
-		//	cout << "Old Albums: " << album.name << endl;
-		}
-		else{
-		//cout << "New Albums: " << album.name << endl;
-		}
-	Artsists[artist.name].albums[album.name] = album;
-	Artsists[artist.name] = artist;
+		//adds artist to unordered map, checks for dupe artist, then updates info in Artists
+		
+		ss.clear();//reset string stream, \n sometimes 
 	}
 
 	fin.close();
+
+	for(auto i = Artists.begin(); i != Artists.end(); ++i){
+		cout << i->first << ": " << (i->second).nsongs << ", " << (i->second).time / 60 << ":";
+		((i->second).time % 60 >= 10) ? cout << (i->second).time % 60 << endl : cout << '0' << (i->second).time % 60 << endl;//make sure the extra 0 is printed
+		for(auto j = (i->second).albums.begin(); j != (i->second).albums.end(); ++j){
+			cout << '\t' << j->first<< ": "<< (j->second).nsongs << ", " << (j->second).time / 60<< ":";
+			((j->second).time % 60 >= 10) ? cout << (j->second).time % 60 << endl : cout << '0' << (j->second).time % 60 << endl;//make sure the extra 0 is printed
+			for(auto k = (j->second).songs.begin(); k != (j->second).songs.end(); ++k){
+				cout << "\t\t" << k->first << ". " << (k->second).title << ": " << (k->second).time / 60 << ':';
+				((k->second).time % 60 >= 10) ? cout << (k->second).time % 60 << endl : cout << '0' << (k->second).time % 60 << endl;//make sure the extra 0 is printed
+			}
+		}
+	}
 }
